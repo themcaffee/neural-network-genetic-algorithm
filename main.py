@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from tqdm import tqdm
 
-from es import CMAES
+from es import CMAES, OpenES, PEPG, SimpleGA
 from network import Network
 
 # Setup logging.
@@ -144,21 +144,21 @@ def generate(generations, nn_param_choices, dataset, solver):
         result = solver.result()
         history.append(result[1])
 
-        logging.info("fitness at iteration", (i + 1), result[1])
+        logging.info("fitness at iteration {} {}".format(str((i + 1)), str(result[1])))
 
         # Get the average accuracy for this generation.
         average_accuracy = get_average_accuracy(networks)
 
         # Print out the average accuracy each generation.
         logging.info("Generation average: %.2f%%" % (average_accuracy * 100))
-        logging.info('-'*80)
+        logging.info('-' * 80)
 
     # Print out the best 5 networks
     networks = sorted(networks, key=lambda x: x.accuracy, reverse=True)
     print_networks(networks[:5])
 
-    logging.info("local optimum discovered by solver: \n", result[0])
-    logging.info("fitness score at this local optimum", result[1])
+    logging.info("local optimum discovered by solver: {}".format(str(result[0])))
+    logging.info("fitness score at this local optimum {}".format(str(result[1])))
     return history
 
 
@@ -179,6 +179,8 @@ def main():
     generations = 2  # Number of times to evole the population.
     population = 10  # Number of networks in each generation.
     dataset = 'mnist'
+    # Possible options: simplega, cmaes, pepg, or oes
+    genetic_algorithm_name = 'cmaes'
 
     nn_param_choices = {
         'nb_neurons': [64, 128, 256, 512, 768, 1024],
@@ -192,12 +194,44 @@ def main():
                  (generations, population))
 
     num_params = len(nn_param_choices)
-    cmaes = CMAES(num_params,
-                  popsize=population,
-                  weight_decay=0.0,
-                  sigma_init=0.5)
+    if genetic_algorithm_name == 'cmaes':
+        # Choose the genetic algorithm to use
+        genetic_algorithm = CMAES(num_params,
+                                  popsize=population,
+                                  weight_decay=0.0,
+                                  sigma_init=0.5)
+    elif genetic_algorithm_name == 'pepg':
+        genetic_algorithm = PEPG(num_params,
+                                 sigma_init=0.5,
+                                 learning_rate=0.1,
+                                 learning_rate_decay=1.0,
+                                 popsize=population,
+                                 average_baseline=False,
+                                 weight_decay=0.00,
+                                 rank_fitness=False,
+                                 forget_best=False)
+    elif genetic_algorithm_name == 'oes':
+        genetic_algorithm = OpenES(num_params,
+                                   sigma_init=0.5,
+                                   sigma_decay=0.999,
+                                   learning_rate=0.1,
+                                   learning_rate_decay=1.0,
+                                   popsize=population,
+                                   antithetic=False,
+                                   weight_decay=0.00,
+                                   rank_fitness=False,
+                                   forget_best=False)
+    elif genetic_algorithm_name == 'simplega':
+        genetic_algorithm = SimpleGA(num_params,
+                                     sigma_init=0.5,
+                                     popsize=population,
+                                     elite_ratio=0.1,
+                                     forget_best=False,
+                                     weight_decay=0.00)
+    else:
+        raise Exception("Invalid genetic algorithm selected")
 
-    history = generate(generations, nn_param_choices, dataset, cmaes)
+    history = generate(generations, nn_param_choices, dataset, genetic_algorithm)
 
 
 if __name__ == '__main__':

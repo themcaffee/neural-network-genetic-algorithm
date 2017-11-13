@@ -9,6 +9,11 @@ On the easy MNIST dataset, we are able to quickly find a network that reaches > 
 For more, see this blog post: 
 https://medium.com/@harvitronix/lets-evolve-a-neural-network-with-a-genetic-algorithm-code-included-8809bece164
 
+## Updates from main repo
+
+- Implement (estool)[https://github.com/hardmaru/estool] as optimizer. This allows for GA, CMA-ES, PEPG, or OpenAI's ES to be used.
+
+
 ## To run
 
 To run the brute force algorithm:
