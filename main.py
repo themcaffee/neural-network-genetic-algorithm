@@ -28,7 +28,9 @@ def train_networks(networks, dataset):
     for i in range(len(networks)):
         network = networks[i]
         network.train(dataset)
-        fitness_list[i] = network.accuracy
+        # Convert accuracy percent to negative fitness score that
+        # is going to be minimized to 0
+        fitness_list[i] = -(1-network.accuracy)
         pbar.update(1)
     pbar.close()
     return fitness_list
@@ -176,9 +178,9 @@ def print_networks(networks):
 
 def main():
     """Evolve a network."""
-    generations = 2  # Number of times to evole the population.
-    population = 10  # Number of networks in each generation.
-    dataset = 'mnist'
+    generations = 10  # Number of times to evole the population.
+    population = 20  # Number of networks in each generation.
+    dataset = 'cifar10'
     # Possible options: simplega, cmaes, pepg, or oes
     genetic_algorithm_name = 'cmaes'
 

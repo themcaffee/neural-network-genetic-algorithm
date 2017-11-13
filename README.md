@@ -11,7 +11,8 @@ https://medium.com/@harvitronix/lets-evolve-a-neural-network-with-a-genetic-algo
 
 ## Updates from main repo
 
-- Implement (estool)[https://github.com/hardmaru/estool] as optimizer. This allows for GA, CMA-ES, PEPG, or OpenAI's ES to be used.
+- Implement [estool](https://github.com/hardmaru/estool) as optimizer. This allows for GA, CMA-ES, PEPG, or OpenAI's ES to be used. Simply change
+  the genetic_algorithm_name in the code to use a different optimizer.
 
 
 ## To run
