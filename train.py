@@ -5,6 +5,8 @@ Based on:
     https://github.com/fchollet/keras/blob/master/examples/mnist_mlp.py
 
 """
+from pprint import pprint
+
 from keras.datasets import mnist, cifar10
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
