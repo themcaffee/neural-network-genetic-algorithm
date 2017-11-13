@@ -158,9 +158,6 @@ def generate(generations, nn_param_choices, dataset, solver):
     # Print out the best 5 networks
     networks = sorted(networks, key=lambda x: x.accuracy, reverse=True)
     print_networks(networks[:5])
-
-    logging.info("local optimum discovered by solver: {}".format(str(result[0])))
-    logging.info("fitness score at this local optimum {}".format(str(result[1])))
     return history
 
 
