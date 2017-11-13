@@ -1,8 +1,10 @@
 """Entry point to evolving the neural network. Start here."""
 import logging
+from pprint import pprint
 
 import numpy as np
 from tqdm import tqdm
+from celery import Celery, group
 
 from es import CMAES, OpenES, PEPG, SimpleGA
 from network import Network
@@ -16,24 +18,34 @@ logging.basicConfig(
 )
 
 
-def train_networks(networks, dataset):
+app = Celery('main', backend='rpc://', broker="amqp://myuser:mypassword@localhost:5672/myvhost")
+
+
+def train_networks(nn_param_choices, nn_params, dataset):
     """Train each network.
 
     Args:
         networks (list): Current population of networks
         dataset (str): Dataset to use for training/evaluating
     """
-    fitness_list = np.zeros(len(networks))
-    pbar = tqdm(total=len(networks))
-    for i in range(len(networks)):
-        network = networks[i]
-        network.train(dataset)
-        # Convert accuracy percent to negative fitness score that
-        # is going to be minimized to 0
-        fitness_list[i] = -(1-network.accuracy)
-        pbar.update(1)
-    pbar.close()
-    return fitness_list
+    # Create a celery group of jobs to train these networks
+    job = group(train_single_network.s(nn_param_choices, params, dataset) for params in nn_params)
+
+    print("Starting async training jobs")
+    # Wait for all results to return
+    result = job.apply_async()
+    result.join()
+    print("Async training jobs finished for this generation")
+    pprint(result)
+    return result
+
+
+@app.task
+def train_single_network(nn_param_choices, parameters, dataset):
+    network = Network(nn_param_choices)
+    network.create_set(parameters)
+    network.train(dataset)
+    return -(1-network.accuracy)
 
 
 def sigmoid(x):
@@ -81,21 +93,6 @@ def get_nn_params(solutions, nn_param_choices):
     return nn_params
 
 
-def create_networks(nn_param_choices, nn_params):
-    """
-    Create all of the networks for a generation
-    :param nn_param_choices:
-    :param nn_params:
-    :return:
-    """
-    networks = []
-    for parameters in nn_params:
-        new_network = Network(nn_param_choices)
-        new_network.create_set(parameters)
-        networks.append(new_network)
-    return networks
-
-
 def get_average_accuracy(networks):
     """Get the average accuracy for a group of networks.
 
@@ -135,11 +132,8 @@ def generate(generations, nn_param_choices, dataset, solver):
         # Get the set of parameters for this generation
         nn_params = get_nn_params(solver.ask(), nn_param_choices)
 
-        # Create the set of networks for this generation
-        networks = create_networks(nn_param_choices, nn_params)
-
         # Train the networks of this generation
-        fitness_list = train_networks(networks, dataset)
+        fitness_list = train_networks(nn_param_choices, nn_params, dataset)
 
         # Save the results
         solver.tell(fitness_list)
