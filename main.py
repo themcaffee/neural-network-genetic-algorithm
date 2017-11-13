@@ -3,7 +3,6 @@ import logging
 from pprint import pprint
 
 import numpy as np
-from tqdm import tqdm
 from celery import Celery, group
 
 from es import CMAES, OpenES, PEPG, SimpleGA
@@ -31,13 +30,13 @@ def train_networks(nn_param_choices, nn_params, dataset):
     # Create a celery group of jobs to train these networks
     job = group(train_single_network.s(nn_param_choices, params, dataset) for params in nn_params)
 
-    print("Starting async training jobs")
+    print("Starting distributed training jobs")
     # Wait for all results to return
     result = job.apply_async()
-    result.join()
-    print("Async training jobs finished for this generation")
-    pprint(result)
-    return result
+    results = result.join()
+    print("Distributed training jobs finished for this generation")
+    pprint(results)
+    return results
 
 
 @app.task
@@ -93,7 +92,7 @@ def get_nn_params(solutions, nn_param_choices):
     return nn_params
 
 
-def get_average_accuracy(networks):
+def get_average_accuracy(fitness_list):
     """Get the average accuracy for a group of networks.
 
     Args:
@@ -104,10 +103,10 @@ def get_average_accuracy(networks):
 
     """
     total_accuracy = 0
-    for network in networks:
-        total_accuracy += network.accuracy
+    for network_accuracy in fitness_list:
+        total_accuracy += network_accuracy
 
-    return total_accuracy / len(networks)
+    return total_accuracy / len(fitness_list)
 
 
 def generate(generations, nn_param_choices, dataset, solver):
@@ -121,8 +120,7 @@ def generate(generations, nn_param_choices, dataset, solver):
 
     """
     history = []
-    result = []
-    networks = []
+    nn_params = []
 
     # Evolve the generation.
     for i in range(generations):
@@ -143,15 +141,15 @@ def generate(generations, nn_param_choices, dataset, solver):
         logging.info("fitness at iteration {} {}".format(str((i + 1)), str(result[1])))
 
         # Get the average accuracy for this generation.
-        average_accuracy = get_average_accuracy(networks)
+        average_accuracy = get_average_accuracy(fitness_list)
 
         # Print out the average accuracy each generation.
         logging.info("Generation average: %.2f%%" % (average_accuracy * 100))
         logging.info('-' * 80)
 
     # Print out the best 5 networks
-    networks = sorted(networks, key=lambda x: x.accuracy, reverse=True)
-    print_networks(networks[:5])
+    # networks = sorted(networks, key=lambda x: x.accuracy, reverse=True)
+    # print_networks(networks[:5])
     return history
 
 
