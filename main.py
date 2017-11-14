@@ -7,6 +7,7 @@ from celery import Celery, group
 
 from es import CMAES, OpenES, PEPG, SimpleGA
 from network import Network
+import os
 
 # Setup logging.
 logging.basicConfig(
@@ -16,8 +17,12 @@ logging.basicConfig(
     filename='log.txt'
 )
 
+QUEUE_USERNAME = os.environ['QUEUE_USERNAME']
+QUEUE_PASSWORD = os.environ['QUEUE_PASSWORD']
+QUEUE_HOST = os.environ['QUEUE_HOST']
+QUEUE_VHOST = os.environ['QUEUE_VHOST']
 
-app = Celery('main', backend='rpc://', broker="amqp://myuser:mypassword@localhost:5672/myvhost")
+app = Celery('main', backend='rpc://', broker="amqp://{}:{}@{}:5672/{}".format(QUEUE_USERNAME, QUEUE_PASSWORD, QUEUE_HOST, QUEUE_VHOST))
 
 
 def train_networks(nn_param_choices, nn_params, dataset):
